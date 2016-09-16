@@ -35,15 +35,13 @@ The output has been reformatted for readability.
             rows => [{<<"_internal">>}, {<<"test">>}]
         }
     ]}
-    6> influxdb:write(Config#{database => "test"}, "cpu_load_short",
+    6> influxdb:write(Config#{database => "test"}, [{"cpu_load_short",
         #{"region" => "af-west", "host" => "server01"},
-        #{"value" => 0.64},
-        erlang:system_time()).
+        #{"value" => 0.64}}]).
     ok
-    7> influxdb:write(Config#{database => "test"}, "cpu_load_short",
+    7> influxdb:write_point(Config#{database => "test"}, [{"cpu_load_short",
         #{"region" => "af-west", "host" => "server02"},
-        #{"value" => 0.67},
-        erlang:system_time()).
+        #{"value" => 0.67}}]).
     ok
     8> influxdb:query(Config#{database => "test"}, "select * from cpu_load_short").
     {ok, [

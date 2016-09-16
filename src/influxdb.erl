@@ -4,50 +4,46 @@
     query/3,
     query/4,
     write/2,
-    write/5
-]).
--export_type([
-    config/0,
-    point/0,
-    measurement/0,
-    tags/0,
-    fields/0,
-    timestamp/0
+    write/3
 ]).
 
 
 -type config() :: influxdb_config:config().
--type point() :: influxdb_line_encoding:point().
--type measurement() :: influxdb_line_encoding:measurement().
--type tags() :: influxdb_line_encoding:tags().
--type fields() :: influxdb_line_encoding:fields().
--type timestamp() :: influxdb_line_encoding:timestamp().
 
 
--spec query(config(), string()) ->
+-spec query(config(), query()) ->
       ok
-    | {ok, jsone:json_object()}
+    | {ok, results()}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
 query(Config, Query) ->
-    query(Config, Query, #{}, infinity).
+    query(Config, Query, #{}, #{}).
 
 
--spec query(config(), string(), map()) ->
+-spec query(config(), query(), query_parameters()) ->
       ok
-    | {ok, jsone:json_object()}
+    | {ok, results()}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
 query(Config, Query, Parameters) ->
-    query(Config, Query, Parameters, infinity).
+    query(Config, Query, Parameters, #{}).
 
 
--spec query(config(), string(), map(), timeout()) ->
+-spec query(config(), query(), query_parameters(), query_options()) ->
       ok
-    | {ok, jsone:json_object()}
+    | {ok, results()}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
-query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Timeout) ->
+-type query() :: string().
+-type query_parameters() :: #{atom() => atom() | binary() | number()}.
+-type query_options() :: #{
+    timeout => timeout()
+}.
+-type results() :: [result()].
+-type result() :: [series()].
+-type series() :: #{name := binary(), columns := [binary()], rows := [tuple()], tags => #{binary() => binary()}}.
+query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Options) ->
+    Timeout = maps:get(timeout, Options, infinity),
     Url = influxdb_uri:encode(#{
         scheme => "http",
         host => Host,
@@ -69,7 +65,20 @@ query(#{host := Host, port := Port, username := Username, password := Password} 
       ok
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
-write(#{host := Host, port := Port, username := Username, password := Password, database := Database}, Measurements) ->
+write(Config, Measurements) ->
+    write(Config, Measurements, #{}).
+
+
+-spec write(config(), [point()], write_options()) ->
+      ok
+    | {error, {not_found, string()}}
+    | {error, {server_error, string()}}.
+-type point() :: influxdb_line_encoding:point().
+-type write_options() :: #{
+    timeout => timeout()
+}.
+write(#{host := Host, port := Port, username := Username, password := Password, database := Database}, Measurements, Options) ->
+    Timeout = maps:get(timeout, Options, infinity),
     Url = influxdb_uri:encode(#{
         scheme => "http",
         host => Host,
@@ -78,12 +87,4 @@ write(#{host := Host, port := Port, username := Username, password := Password, 
         query => #{"db" => Database}
     }),
     Body = influxdb_line_encoding:encode(Measurements),
-    influxdb_http:post(Url, Username, Password, "application/octet-stream", Body, infinity).
-
-
--spec write(config(), measurement(), tags(), fields(), timestamp()) ->
-      ok
-    | {error, {not_found, string()}}
-    | {error, {server_error, string()}}.
-write(Config, Measurement, Tags, Fields, Timestamp) ->
-    write(Config, [{Measurement, Tags, Fields, Timestamp}]).
+    influxdb_http:post(Url, Username, Password, "application/octet-stream", Body, Timeout).
