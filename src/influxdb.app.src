@@ -1,0 +1,14 @@
+{application, influxdb, [
+    {description, "InfluxDB client library"},
+    {vsn, "semver"},
+    {modules, []},
+    {applications, [
+        kernel,
+        stdlib,
+        inets,
+        jsone
+    ]},
+    {mod, {influxdb_app, []}},
+    {registered, [influxdb_sup]},
+    {env, []}
+]}.

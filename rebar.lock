@@ -1,0 +1,6 @@
+{"1.1.0",
+[{<<"jsone">>,{pkg,<<"jsone">>,<<"1.3.0">>},0}]}.
+[
+{pkg_hash,[
+ {<<"jsone">>, <<"7CF49868F731EAF36CF1F55FAFD474C0C772DABBD65A8B09CA235918A0FC0BF6">>}]}
+].
