@@ -1,7 +1,6 @@
 -module(influxdb_line_encoding).
 -export([
-    encode/1,
-    encode/4
+    encode/1
 ]).
 -export_type([
     point/0,
@@ -16,7 +15,7 @@
 -type measurement() :: iodata().
 -type tags() :: #{iodata() => iodata()}.
 -type fields() :: #{iodata() => number() | boolean() | iodata()}.
--type timestamp() :: integer(). % erlang:system_time().
+-type timestamp() :: integer().
 
 
 -spec encode([point()]) -> iodata().
@@ -75,7 +74,7 @@ encode_fields([{Key, Value} | Rest], Acc) ->
 encode_timestamp(undefined) ->
     [];
 encode_timestamp(Timestamp) ->
-    [$\s, erlang:integer_to_binary(erlang:convert_time_unit(Timestamp, native, nano_seconds))].
+    [$\s, erlang:integer_to_binary(Timestamp)].
 
 
 %% @doc encode a tag or field key.
@@ -161,10 +160,10 @@ encode_fields_test_() ->
         || {Fields, Encoded} <- maps:to_list(Tests)].
 
 encode_timestamp_test_() ->
-    Now = erlang:system_time(),
+    Now = erlang:system_time(nano_seconds),
     Tests = #{
         undefined => "",
-        Now => [$\s, erlang:integer_to_binary(erlang:convert_time_unit(Now, native, nano_seconds))]
+        Now => [$\s, erlang:integer_to_binary(Now)]
 
     },
     [{?label(Timestamp), ?_assertEqual(Encoded, encode_timestamp(Timestamp))}
