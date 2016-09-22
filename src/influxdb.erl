@@ -44,7 +44,7 @@ query(Config, Query, Parameters) ->
 -type query_parameters() :: #{atom() => atom() | binary() | number()}.
 -type query_options() :: #{
     timeout => timeout(),
-    precision => hour | minute | second | milli_second | micro_second | nano_second,
+    precision => hours | minutes | seconds | milli_seconds | micro_seconds | nano_seconds,
     retention_policy => string()
 }.
 -type results() :: [result()].
@@ -80,12 +80,12 @@ default_url_query(#{}) ->
     #{"epoch" => precision(nano_second)}.
 
 
-precision(hour) -> "h";
-precision(minute) -> "m";
-precision(second) -> "s";
-precision(milli_second) -> "ms";
-precision(micro_second) -> "u";
-precision(nano_second) -> "ns".
+precision(hours) -> "h";
+precision(minutes) -> "m";
+precision(seconds) -> "s";
+precision(milli_seconds) -> "ms";
+precision(micro_seconds) -> "u";
+precision(nano_seconds) -> "ns".
 
 
 -spec write(config(), [point()]) ->
@@ -103,7 +103,7 @@ write(Config, Measurements) ->
 -type point() :: influxdb_line_encoding:point().
 -type write_options() :: #{
     timeout => timeout(),
-    precision => hour | minute | second | milli_second | micro_second | nano_second,
+    precision => hours | minutes | seconds | milli_seconds | micro_seconds | nano_seconds,
     retention_policy => string()
 }.
 write(#{host := Host, port := Port, username := Username, password := Password, database := Database}, Measurements, Options) ->
@@ -114,7 +114,7 @@ write(#{host := Host, port := Port, username := Username, password := Password, 
         port => Port,
         path => "/write",
         query => maps:fold(fun
-            (precision, Value, Acc) -> maps:put("epoch", precision(Value), Acc);
+            (precision, Value, Acc) -> maps:put("precision", precision(Value), Acc);
             (retention_policy, Value, Acc) -> maps:put("rp", Value, Acc);
             (_Key, _Value, Acc) -> Acc
         end, #{"db" => Database}, Options)
