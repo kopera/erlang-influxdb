@@ -1,3 +1,4 @@
 /.rebar3
 /_build
+/ebin
 /erl_crash.dump
