@@ -12,9 +12,10 @@
 
 
 -type point() :: {measurement(), tags(), fields(), timestamp()} | {measurement(), tags(), fields()}.
--type measurement() :: iodata().
--type tags() :: #{iodata() => iodata()}.
--type fields() :: #{iodata() => number() | boolean() | iodata()}.
+-type measurement() :: key().
+-type tags() :: #{key() => iodata() | atom()}.
+-type fields() :: #{key() => number() | boolean() | iodata() | atom()}.
+-type key() :: iodata() | atom().
 -type timestamp() :: integer().
 
 
@@ -41,6 +42,8 @@ encode(Measurement, Tags, Fields, Timestamp) ->
 
 
 %% @doc encode the measurement name, escaping `,` and ` ` (space).
+encode_measurement(Measurement) when is_atom(Measurement) ->
+    encode_measurement(atom_to_list(Measurement));
 encode_measurement(Measurement) ->
     escape(Measurement, fun
         (C) when C =:= $, orelse C =:= $\s -> [$\\, C];
@@ -51,7 +54,7 @@ encode_measurement(Measurement) ->
 %% @doc encode the tags map, escaping `,`, ` ` (space) and `=` in both the tag name and tag value. The encoded tags map
 %%      includes the `,` prefix in the case of the non empty map.
 encode_tags(Tags) ->
-    encode_tags(lists:ukeysort(1, [{unicode:characters_to_list(Key), Value} || {Key, Value} <- maps:to_list(Tags)]), []).
+    encode_tags(lists:ukeysort(1, [{normalize_key(Key), Value} || {Key, Value} <- maps:to_list(Tags)]), []).
 
 encode_tags([], Acc) ->
     lists:reverse(Acc);
@@ -62,7 +65,7 @@ encode_tags([{Key, Value} | Rest], Acc) ->
 %% @doc encode the fields map, escaping `,`, ` ` (space) and `=` in the field name and using the right encoding for the
 %%      field value based on its type.
 encode_fields(Fields) ->
-    encode_fields(lists:ukeysort(1, [{unicode:characters_to_list(Key), Value} || {Key, Value} <- maps:to_list(Fields)]), []).
+    encode_fields(lists:ukeysort(1, [{normalize_key(Key), Value} || {Key, Value} <- maps:to_list(Fields)]), []).
 
 encode_fields([{Key, Value}], Acc) ->
     lists:reverse(Acc, [encode_key(Key), $=, encode_field_value(Value)]);
@@ -77,6 +80,13 @@ encode_timestamp(Timestamp) ->
     [$\s, erlang:integer_to_binary(Timestamp)].
 
 
+%% @doc convert the key from iodata() | atom() to string().
+normalize_key(Data) when is_atom(Data) ->
+    erlang:atom_to_list(Data);
+normalize_key(Data) ->
+    unicode:characters_to_list(Data).
+
+
 %% @doc encode a tag or field key.
 encode_key(Data) ->
     escape(Data, fun
@@ -86,6 +96,8 @@ encode_key(Data) ->
 
 
 %% @doc encode a tag value.
+encode_tag_value(Data) when is_atom(Data) ->
+    encode_tag_value(atom_to_list(Data));
 encode_tag_value(Data) ->
     escape(Data, fun
         (C) when C =:= $, orelse C =:= $= orelse C =:= $\s -> [$\\, C];
@@ -102,6 +114,8 @@ encode_field_value(true) ->
     <<"t">>;
 encode_field_value(false) ->
     <<"f">>;
+encode_field_value(Value) when is_atom(Value) ->
+    encode_field_value(atom_to_list(Value));
 encode_field_value(Value) when is_list(Value) orelse is_binary(Value) ->
     [$", escape(Value, fun
         (C) when C =:= $" -> [$\\, C];
