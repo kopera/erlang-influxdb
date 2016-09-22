@@ -6,6 +6,12 @@
     write/2,
     write/3
 ]).
+-export_type([
+    config/0,
+    query/0,
+    query_parameters/0,
+    point/0
+]).
 
 
 -type config() :: influxdb_config:config().
