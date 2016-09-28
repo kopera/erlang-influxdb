@@ -75,7 +75,7 @@ url_query(Config, Options) ->
 
 
 default_url_query(#{database := Database}) ->
-    #{"db" => Database, "epoch" => precision(nano_second)};
+    #{"db" => Database, "epoch" => precision(nano_seconds)};
 default_url_query(#{}) ->
     #{"epoch" => precision(nano_second)}.
 
