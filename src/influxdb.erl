@@ -8,6 +8,7 @@
 ]).
 -export_type([
     config/0,
+    time_unit/0,
     query/0,
     query_parameters/0,
     point/0
@@ -15,6 +16,7 @@
 
 
 -type config() :: influxdb_config:config().
+-type time_unit() :: hour | minute | second | millisecond | microsecond | nanosecond.
 
 
 -spec query(config(), query()) ->
@@ -44,13 +46,13 @@ query(Config, Query, Parameters) ->
 -type query_parameters() :: #{atom() => atom() | binary() | number()}.
 -type query_options() :: #{
     timeout => timeout(),
-    precision => hours | minutes | seconds | milli_seconds | micro_seconds | nano_seconds,
+    precision => time_unit(),
     retention_policy => string()
 }.
 -type results() :: [result()].
 -type result() :: [series()].
 -type series() :: #{name := binary(), columns := [binary()], rows := [tuple()], tags => #{binary() => binary()}}.
-query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Options) ->
+query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Options) when is_map(Parameters), is_map(Options) ->
     Timeout = maps:get(timeout, Options, infinity),
     Url = influxdb_uri:encode(#{
         scheme => "http",
@@ -75,17 +77,17 @@ url_query(Config, Options) ->
 
 
 default_url_query(#{database := Database}) ->
-    #{"db" => Database, "epoch" => precision(nano_seconds)};
+    #{"db" => Database, "epoch" => precision(nanosecond)};
 default_url_query(#{}) ->
-    #{"epoch" => precision(nano_second)}.
+    #{"epoch" => precision(nanosecond)}.
 
 
-precision(hours) -> "h";
-precision(minutes) -> "m";
-precision(seconds) -> "s";
-precision(milli_seconds) -> "ms";
-precision(micro_seconds) -> "u";
-precision(nano_seconds) -> "ns".
+precision(hour) -> "h";
+precision(minute) -> "m";
+precision(second) -> "s";
+precision(millisecond) -> "ms";
+precision(microsecond) -> "u";
+precision(nanosecond) -> "ns".
 
 
 -spec write(config(), [point()]) ->
@@ -103,7 +105,7 @@ write(Config, Measurements) ->
 -type point() :: influxdb_line_encoding:point().
 -type write_options() :: #{
     timeout => timeout(),
-    precision => hours | minutes | seconds | milli_seconds | micro_seconds | nano_seconds,
+    precision => time_unit(),
     retention_policy => string()
 }.
 write(#{host := Host, port := Port, username := Username, password := Password, database := Database}, Measurements, Options) ->
