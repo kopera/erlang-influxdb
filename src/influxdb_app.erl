@@ -14,7 +14,8 @@ start(_StartType, _StartArgs) ->
     HTTPCConfig = [
         {profile, influxdb},
         {max_sessions, 10},
-        {max_keep_alive_length, 10}
+        {max_keep_alive_length, 10},
+        {max_pipeline_length, 0}
     ],
     {ok, _} = inets:start(httpc, HTTPCConfig),
     influxdb_sup:start_link().
