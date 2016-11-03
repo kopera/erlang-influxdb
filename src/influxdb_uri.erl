@@ -21,18 +21,18 @@
 
 -spec encode(uri()) -> binary().
 -type uri() :: #{
-    scheme := string(),
-    authority => string(),
-    userinfo => string(),
-    host => string(),
+    scheme := iodata(),
+    authority => iodata(),
+    userinfo => iodata(),
+    host => iodata(),
     port => non_neg_integer(),
-    path := string(),
+    path := iodata(),
     query => query(),
-    fragment => string()
+    fragment => iodata()
 }.
 %% @doc Encode a URI.
 encode(#{scheme := Scheme, path := Path} = Uri) ->
-    list_to_binary([Scheme, $:, encode_authority(Uri),
+    iolist_to_binary([Scheme, $:, encode_authority(Uri),
         Path,
         case encode_query(maps:get(query, Uri, [])) of
             <<>> -> [];
@@ -44,6 +44,7 @@ encode(#{scheme := Scheme, path := Path} = Uri) ->
         end]).
 
 
+-spec encode_authority(uri()) -> iodata().
 encode_authority(#{authority := Authority}) ->
     ["//", Authority];
 encode_authority(#{host := Host} = Uri) ->
@@ -66,13 +67,10 @@ encode_authority(_) ->
 
 %% == Encoding data ==
 
--spec encode_query(Query) -> binary() when
-    Query :: #{Key => Value} | [{Key, Value} | Key],
-    Key :: atom() | string() | binary(),
-    Value :: string() | binary() | boolean().
+-spec encode_query(query()) -> binary().
 -type query() :: #{query_key() => query_value()} | [{query_key(), query_value()} | query_key()].
--type query_key() :: string() | binary().
--type query_value() :: string() | binary() | boolean().
+-type query_key() :: iodata() | atom().
+-type query_value() :: iodata() | boolean().
 %% @doc Encode a map or a list of key value pairs into `key1=value1&key2=value2&key3&key4=value4...' where the keys and
 %% values are encoded using {@link encode_component_plus/1}.
 encode_query(Values) when is_map(Values) ->
@@ -91,14 +89,14 @@ encode_query(Values) when is_list(Values) ->
     iolist_to_binary(lists:join($&, Encoded)).
 
 
--spec encode_component(string() | binary()) -> binary().
+-spec encode_component(iodata()) -> binary().
 %% @doc Encode a string percent-escaping all but the "unreserved" characters.
 encode_component(String) ->
     encode_component(String, fun is_char_unreserved/1).
 
 
 -spec encode_component(String, Pred) -> binary() when
-    String :: atom() | string() | binary(),
+    String :: atom() | iodata(),
     Pred :: fun((byte()) -> boolean() | binary()).
 %% @doc Encode a string percent-escaping based on the given predicate function.
 %%
@@ -123,7 +121,7 @@ encode_component(String, Pred) when is_atom(String) ->
     encode_component(atom_to_binary(String, utf8), Pred).
 
 
--spec encode_component_plus(atom() | string() | binary()) -> binary().
+-spec encode_component_plus(atom() | iodata()) -> binary().
 %% @doc Encode a string percent-escaping all but the "unreserved" characters and converts space characters to `+'.
 encode_component_plus(String) ->
     encode_component(String, fun

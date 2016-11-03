@@ -42,7 +42,7 @@ query(Config, Query, Parameters) ->
     | {ok, results()}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
--type query() :: string().
+-type query() :: iodata().
 -type query_parameters() :: #{atom() => atom() | binary() | number()}.
 -type query_options() :: #{
     timeout => timeout(),
