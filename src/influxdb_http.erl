@@ -2,13 +2,19 @@
 -export([
     post/6
 ]).
+-export_type([
+    result/0,
+    series/0
+]).
 
 
 -spec post(binary(), string(), string(), string(), iodata(), timeout()) ->
       ok
-    | {ok, [jsone:json_object()]}
+    | {ok, [result()]}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
+-type result() :: [series()].
+-type series() :: #{name := binary(), columns := [binary()], rows := [tuple()], tags => #{binary() => binary()}}.
 post(Url, Username, Password, ContentType, Body, Timeout) ->
     Authorization = "Basic " ++ base64:encode_to_string(Username ++ ":" ++ Password),
     Headers = [{"Authorization", Authorization}],

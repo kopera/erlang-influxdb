@@ -21,7 +21,7 @@
 
 -spec query(config(), query()) ->
       ok
-    | {ok, results()}
+    | {ok, [result()]}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
 query(Config, Query) ->
@@ -30,7 +30,7 @@ query(Config, Query) ->
 
 -spec query(config(), query(), query_parameters()) ->
       ok
-    | {ok, results()}
+    | {ok, [result()]}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
 query(Config, Query, Parameters) ->
@@ -39,7 +39,7 @@ query(Config, Query, Parameters) ->
 
 -spec query(config(), query(), query_parameters(), query_options()) ->
       ok
-    | {ok, results()}
+    | {ok, [result()]}
     | {error, {not_found, string()}}
     | {error, {server_error, string()}}.
 -type query() :: iodata().
@@ -49,9 +49,7 @@ query(Config, Query, Parameters) ->
     precision => time_unit(),
     retention_policy => string()
 }.
--type results() :: [result()].
--type result() :: [series()].
--type series() :: #{name := binary(), columns := [binary()], rows := [tuple()], tags => #{binary() => binary()}}.
+-type result() :: influxdb_http:result().
 query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Options) when is_map(Parameters), is_map(Options) ->
     Timeout = maps:get(timeout, Options, infinity),
     Url = influxdb_uri:encode(#{
