@@ -20,7 +20,6 @@ defmodule InfluxDB.Mixfile do
   defp package() do
     [maintainers: ["Ali Sabil"],
      files: [
-       "include",
        "lib",
        "LICENSE*",
        "mix.exs",
