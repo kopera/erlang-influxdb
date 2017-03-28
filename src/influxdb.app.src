@@ -1,6 +1,6 @@
 {application, influxdb, [
     {description, "InfluxDB client library"},
-    {vsn, "semver"},
+    {vsn, "0.2.0"},
     {modules, []},
     {applications, [
         kernel,

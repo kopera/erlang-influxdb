@@ -47,7 +47,7 @@ query(Config, Query, Parameters) ->
 -type query_options() :: #{
     timeout => timeout(),
     precision => time_unit(),
-    retention_policy => string()
+    retention_policy => iodata()
 }.
 -type result() :: influxdb_http:result().
 query(#{host := Host, port := Port, username := Username, password := Password} = Config, Query, Parameters, Options) when is_map(Parameters), is_map(Options) ->
