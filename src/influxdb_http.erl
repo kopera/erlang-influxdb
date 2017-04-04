@@ -1,6 +1,6 @@
 -module(influxdb_http).
 -export([
-    post/6
+    post/7
 ]).
 -export_type([
     result/0,
@@ -8,21 +8,22 @@
 ]).
 
 
--spec post(binary(), string(), string(), string(), iodata(), timeout()) ->
+-spec post(client(), binary(), string(), string(), string(), iodata(), timeout()) ->
       ok
     | {ok, [result()]}
     | {error, {not_found, string()}}
-    | {error, {server_error, string()}}.
+| {error, {server_error, string()}}.
+-type client() :: query | write.
 -type result() :: [series()].
 -type series() :: #{name := binary(), columns := [binary()], rows := [tuple()], tags => #{binary() => binary()}}.
-post(Url, Username, Password, ContentType, Body, Timeout) ->
+post(Client, Url, Username, Password, ContentType, Body, Timeout) ->
     Authorization = "Basic " ++ base64:encode_to_string(Username ++ ":" ++ Password),
     Headers = [{"Authorization", Authorization}],
     case httpc:request(post,
             {binary_to_list(Url), Headers, ContentType, iolist_to_binary(Body)},
             [{timeout, Timeout}],
             [{body_format, binary}],
-            influxdb) of
+            profile(Client)) of
         {ok, {{_, RespCode, _}, RespHeaders, RespBody}} ->
             response(RespCode, RespHeaders, RespBody);
         {error, Reason} ->
@@ -31,6 +32,11 @@ post(Url, Username, Password, ContentType, Body, Timeout) ->
 
 
 %% Internals
+
+profile(query) ->
+    influxdb_query;
+profile(write) ->
+    influxdb_write.
 
 
 response(200, _, Body) ->

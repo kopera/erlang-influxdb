@@ -63,7 +63,7 @@ query(#{host := Host, port := Port, username := Username, password := Password} 
         q => Query,
         params => jsone:encode(Parameters)
     }),
-    influxdb_http:post(Url, Username, Password, "application/x-www-form-urlencoded", Body, Timeout).
+    influxdb_http:post(query, Url, Username, Password, "application/x-www-form-urlencoded", Body, Timeout).
 
 
 url_query(Config, Options) ->
@@ -120,4 +120,4 @@ write(#{host := Host, port := Port, username := Username, password := Password, 
         end, #{"db" => Database}, Options)
     }),
     Body = influxdb_line_encoding:encode(Measurements),
-    influxdb_http:post(Url, Username, Password, "application/octet-stream", Body, Timeout).
+    influxdb_http:post(write, Url, Username, Password, "application/octet-stream", Body, Timeout).
