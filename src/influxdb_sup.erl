@@ -16,9 +16,11 @@ start_link() ->
 %% @hidden
 init([]) ->
     BatchProcessFun = influxdb:get_batch_processing_fun(),
-    Children = [
-        {batch_processor, {batch_processor, start_link, [BatchProcessFun]},
-        permanent, infinity, worker, [batch_processor]}
-    ],
-    RestartStrategy = {one_for_one, 2, 5},
-    {ok, {RestartStrategy, Children}}.
+    Args = [{name, {local, influxdb_pool}},
+            {worker_module, batch_processor},
+            {size, 5}, {max_overflow, 10},
+            {batch_proc_fun, BatchProcessFun}],
+    PoolSpec = {influxdb_pool, {poolboy, start_link, [Args]},
+            permanent, 2000, worker, [poolboy]},
+    RestartStrategy = {one_for_one, 10, 10},
+    {ok, {RestartStrategy, [PoolSpec]}}.

@@ -122,17 +122,16 @@ write(#{host := Host, port := Port, username := Username, password := Password, 
             (_Key, _Value, Acc) -> Acc
         end, #{"db" => Database}, Options)
     }),
-    Body0 = influxdb_line_encoding:encode(Measurements),
-    IoList = [["test_table2",[44,"a",61,"2",44,"host",61,"Hritiks-MacBook-Pro",44,"installation_id",61,"hritikxDD"],32,["c",61,[<<"1">>,105]],[],10]],
-    Body = Body0 ++ IoList,
-    lager:info("URL: ~p Body ~p: BinaryBody: ~p", [Url, Body, iolist_to_binary(Body)]),
+    Body = influxdb_line_encoding:encode(Measurements),
     influxdb_http:post(write, Url, Username, Password, "application/octet-stream", Body, Timeout).
 
 write_async(Config, Measurements) ->
     write_async(Config, Measurements, #{}).
 
 write_async(Config, Measurements, Options) ->
-    whereis(influx_batch_processor) ! {Config, Measurements, Options}.
+    AvailWorkers = gen_server:call(influxdb_pool, get_avail_workers),
+    RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
+    lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, Measurements, Options}.
 
 get_batch_processing_fun() ->
     fun(Batch) ->

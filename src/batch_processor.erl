@@ -27,8 +27,8 @@
 %%%===================================================================
 
 %% @doc Starts the server
-start_link(BatchProcessFun) ->
-    gen_statem:start_link({local, influx_batch_processor}, ?MODULE, [BatchProcessFun], []).
+start_link(Args) ->
+    gen_statem:start_link(?MODULE, Args, []).
 
 %%%===================================================================
 %%% gen_statem callbacks
@@ -39,8 +39,9 @@ callback_mode() ->
 
 %% @private
 %% @doc Initializes the server
-init([BatchProcessFun]) ->
+init(Args) ->
     process_flag(message_queue_data, off_heap),
+    BatchProcessFun = proplists:get_value(batch_proc_fun, Args),
     {ok, ready, #state{batch_proc_fun = BatchProcessFun}}.
 
 ready(info, Data, #state{batch_proc_fun = ProcFun}) ->
