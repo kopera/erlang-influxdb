@@ -40,12 +40,14 @@ callback_mode() ->
 %% @private
 %% @doc Initializes the server
 init(Args) ->
+    %% Don't store data in main heap to improve performance during congestion
     process_flag(message_queue_data, off_heap),
     BatchProcessFun = proplists:get_value(batch_proc_fun, Args),
     {ok, ready, #state{batch_proc_fun = BatchProcessFun}}.
 
 ready(info, Data, #state{batch_proc_fun = ProcFun}) ->
-    StartTime = os:timestamp(),
+    %% Use erlang:monotonic_time() to avoid time warps
+    StartTime = erlang:monotonic_time(millisecond),
     NewData = receive_and_merge([Data], StartTime),
     ProcFun(NewData),
     keep_state_and_data.
@@ -53,14 +55,14 @@ ready(info, Data, #state{batch_proc_fun = ProcFun}) ->
 receive_and_merge(AccData, _StartTime) when length(AccData) >= 500 ->
     AccData;
 receive_and_merge(AccData, StartTime) ->
-    Time = os:timestamp(),
-    TimeLeft = 1000 - timer:now_diff(Time, StartTime) div 1000, %% ms
+    Time = erlang:monotonic_time(millisecond),
+    TimeLeft = 1000 - (Time - StartTime),
     if
         TimeLeft =< 0 ->
             AccData;
         true ->
             receive
-                {'$gen_cast', {send_message, _, _, Data}} ->
+                Data ->
                     receive_and_merge([Data | AccData], StartTime)
             after
                 TimeLeft ->
