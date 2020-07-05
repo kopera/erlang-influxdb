@@ -4,7 +4,10 @@
     query/3,
     query/4,
     write/2,
-    write/3
+    write/3,
+    write_async/2,
+    write_async/3,
+    get_batch_processing_fun/0
 ]).
 -export_type([
     config/0,
@@ -121,3 +124,39 @@ write(#{host := Host, port := Port, username := Username, password := Password, 
     }),
     Body = influxdb_line_encoding:encode(Measurements),
     influxdb_http:post(write, Url, Username, Password, "application/octet-stream", Body, Timeout).
+
+write_async(Config, Measurements) ->
+    write_async(Config, Measurements, #{}).
+
+write_async(Config, Measurements, Options) ->
+    AvailWorkers = gen_server:call(influxdb_pool, get_avail_workers),
+    RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
+    lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, Measurements, Options}.
+
+get_batch_processing_fun() ->
+    fun(Batch) ->
+        {Config, _Measurement, Options} = hd(Batch),
+        #{host := Host, port := Port, username := Username,
+            password := Password, database := Database} = Config,
+        Timeout = maps:get(timeout, Options, infinity),
+        Url = influxdb_uri:encode(#{
+            scheme => "http",
+            host => Host,
+            port => Port,
+            path => "/write",
+            query => maps:fold(fun
+                (precision, Value, Acc) -> maps:put("precision", precision(Value), Acc);
+                (retention_policy, Value, Acc) -> maps:put("rp", Value, Acc);
+                (_Key, _Value, Acc) -> Acc
+            end, #{"db" => Database}, Options)
+        }),
+        FinalBody =
+            lists:foldl(
+                fun({_Config, Measurements, _Options}, BodyAcc) ->
+                    influxdb_line_encoding:encode(Measurements) ++ BodyAcc
+                end,
+                [],
+            Batch),
+        influxdb_http:post(write, Url, Username, Password,
+            "application/octet-stream", FinalBody, Timeout)
+    end.
