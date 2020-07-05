@@ -15,7 +15,10 @@ start_link() ->
 
 %% @hidden
 init([]) ->
-    Flags = #{},
+    BatchProcessFun = influxdb:get_batch_processing_fun(),
     Children = [
+        {batch_processor, {batch_processor, start_link, [BatchProcessFun]},
+        permanent, infinity, worker, [batch_processor]}
     ],
-    {ok, {Flags, Children}}.
+    RestartStrategy = {one_for_one, 2, 5},
+    {ok, {RestartStrategy, Children}}.
