@@ -22,5 +22,24 @@ init([]) ->
             {batch_proc_fun, BatchProcessFun}],
     PoolSpec = {influxdb_pool, {poolboy, start_link, [Args]},
             permanent, 2000, worker, [poolboy]},
+    AppPools = application:get_env(influxdb, app_pools, #{}),
+    ExtraPoolSpec =
+        maps:fold(
+            fun(App, AppSpec, SpecAcc) ->
+                case maps:get(influxdb_pool, AppSpec, undefined) of
+                    undefined -> SpecAcc;
+                    SizeSpec ->
+                        PoolName = list_to_atom(atom_to_list(App) ++ "_influxdb_pool"),
+                        PoolArgs = [{name, {local, PoolName}},
+                                        {worker_module, batch_processor},
+                                        {size, 5}, {max_overflow, 10},
+                                        {batch_proc_fun, BatchProcessFun}] ++ SizeSpec,
+                        [{list_to_atom(atom_to_list(App) ++ "_influxdb_pool"),
+                            {poolboy, start_link, [PoolArgs]}, permanent, 2000, worker, [poolboy]} | SpecAcc]
+                end
+            end,
+            [],
+            AppPools
+        ),
     RestartStrategy = {one_for_one, 10, 10},
-    {ok, {RestartStrategy, [PoolSpec]}}.
+    {ok, {RestartStrategy, [PoolSpec | ExtraPoolSpec]}}.

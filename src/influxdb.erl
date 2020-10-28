@@ -82,6 +82,22 @@ default_url_query(#{database := Database}) ->
 default_url_query(#{}) ->
     #{"epoch" => precision(nanosecond)}.
 
+get_pool_name() ->
+    AppName =
+        case application:get_application() of
+            {ok, App} -> App;
+            _ -> undefined
+        end,
+    AppPools = application:get_env(influxdb, app_pools, #{}),
+    case maps:get(AppName, AppPools, undefined) of
+        undefined -> influxdb_pool;
+        AppSpec ->
+            case maps:get(influxdb_pool, AppSpec, undefined) of
+                undefined -> influxdb_pool;
+                _ ->
+                    list_to_atom(atom_to_list(AppName) ++ "_influxdb_pool")
+            end
+    end.
 
 precision(hour) -> "h";
 precision(minute) -> "m";
@@ -129,7 +145,7 @@ write_async(Config, Measurements) ->
     write_async(Config, Measurements, #{}).
 
 write_async(Config, Measurements, Options) ->
-    AvailWorkers = gen_server:call(influxdb_pool, get_avail_workers),
+    AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers),
     RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
     lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, Measurements, Options}.
 
