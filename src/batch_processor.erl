@@ -19,7 +19,8 @@
 -export([ready/3]).
 
 -record(state, {
-    batch_proc_fun = undefined
+    batch_proc_fun = undefined,
+    flush_threshold
 }).
 
 %%%===================================================================
@@ -43,18 +44,36 @@ init(Args) ->
     %% Don't store data in main heap to improve performance during congestion
     process_flag(message_queue_data, off_heap),
     BatchProcessFun = proplists:get_value(batch_proc_fun, Args),
-    {ok, ready, #state{batch_proc_fun = BatchProcessFun}}.
+    FlushThreshold = proplists:get_value(flush_threshold, Args, 1000000),
+    {ok, ready, #state{batch_proc_fun = BatchProcessFun, flush_threshold = FlushThreshold}}.
 
-ready(info, Data, #state{batch_proc_fun = ProcFun}) ->
+ready(info, Data, State) ->
+    ProcFun = State#state.batch_proc_fun, 
     %% Use erlang:monotonic_time() to avoid time warps
     StartTime = erlang:monotonic_time(millisecond),
-    NewData = receive_and_merge([Data], StartTime),
+    NewData = receive_and_merge([Data], StartTime, State),
     ProcFun(NewData),
     keep_state_and_data.
 
-receive_and_merge(AccData, _StartTime) when length(AccData) >= 500 ->
+drop_mq() ->
+    receive
+        _Data ->
+            drop_mq()
+    after 0 ->
+        ok
+    end.
+
+flush_if_necessary(T) ->
+    {_, L} = process_info(self(), message_queue_len),
+    case L > T of
+        true -> drop_mq();
+        false -> ok
+    end.
+
+receive_and_merge(AccData, _StartTime, State) when length(AccData) >= 500 ->
+    flush_if_necessary(State#state.flush_threshold),
     AccData;
-receive_and_merge(AccData, StartTime) ->
+receive_and_merge(AccData, StartTime, State) ->
     Time = erlang:monotonic_time(millisecond),
     TimeLeft = 1000 - (Time - StartTime),
     if
@@ -63,7 +82,7 @@ receive_and_merge(AccData, StartTime) ->
         true ->
             receive
                 Data ->
-                    receive_and_merge([Data | AccData], StartTime)
+                    receive_and_merge([Data | AccData], StartTime, State)
             after
                 TimeLeft ->
                     AccData
