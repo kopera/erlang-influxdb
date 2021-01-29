@@ -146,8 +146,9 @@ write_async(Config, Measurements) ->
 
 write_async(Config, Measurements, Options) ->
     AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers),
+    EncodedMeasurements = influxdb_line_encoding:encode(Measurements),
     RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
-    lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, Measurements, Options}.
+    lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, EncodedMeasurements, Options}.
 
 get_batch_processing_fun() ->
     fun(Batch) ->
@@ -168,8 +169,8 @@ get_batch_processing_fun() ->
         }),
         FinalBody =
             lists:foldl(
-                fun({_Config, Measurements, _Options}, BodyAcc) ->
-                    influxdb_line_encoding:encode(Measurements) ++ BodyAcc
+                fun({_Config, EncodedMeasurements, _Options}, BodyAcc) ->
+                    EncodedMeasurements ++ BodyAcc
                 end,
                 [],
             Batch),
