@@ -145,10 +145,25 @@ write_async(Config, Measurements) ->
     write_async(Config, Measurements, #{}).
 
 write_async(Config, Measurements, Options) ->
-    AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers),
-    EncodedMeasurements = influxdb_line_encoding:encode(Measurements),
-    RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
-    lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, EncodedMeasurements, Options}.
+    AvailWorkers =
+        try
+            gen_server:call(get_pool_name(), get_avail_workers, 3000)
+        catch
+            Error:Reason:Stacktrace ->
+                PoolboyPid = erlang:whereis(get_pool_name()),
+                PoolboyStacktrace =  erlang:process_info(PoolboyPid, current_stacktrace),
+                io:format("Error : ~p~n, Reason : ~p~n, Stacktrace : ~p~n, Poolboy Stacktrace :  ~p~n",
+                          [Error, Reason, Stacktrace, PoolboyStacktrace]),
+                io:format("Backtrace = ~s~n", [element(2, erlang:process_info(PoolboyPid, backtrace))])
+                []
+        end,
+    case AvailWorkers of
+        [] -> ok;
+        AvailWorkers ->
+            EncodedMeasurements = influxdb_line_encoding:encode(Measurements),
+            RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
+            lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, EncodedMeasurements, Options}
+    end.
 
 get_batch_processing_fun() ->
     fun(Batch) ->
