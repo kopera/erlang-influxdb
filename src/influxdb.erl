@@ -145,7 +145,8 @@ write_async(Config, Measurements) ->
     write_async(Config, Measurements, #{}).
 
 write_async(Config, Measurements, Options) ->
-    AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers),
+    GetWorkerTimeout = maps:get(get_worker_timeout, Options, 5000),
+    AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers, GetWorkerTimeout),
     EncodedMeasurements = influxdb_line_encoding:encode(Measurements),
     RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
     lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, EncodedMeasurements, Options}.
