@@ -82,7 +82,7 @@ default_url_query(#{database := Database}) ->
 default_url_query(#{}) ->
     #{"epoch" => precision(nanosecond)}.
 
-get_pool_name() ->
+get_pool_name(Db) ->
     AppName =
         case application:get_application() of
             {ok, App} -> App;
@@ -90,12 +90,19 @@ get_pool_name() ->
         end,
     AppPools = application:get_env(influxdb, app_pools, #{}),
     case maps:get(AppName, AppPools, undefined) of
-        undefined -> influxdb_pool;
+        undefined ->
+            influxdb_pool;
         AppSpec ->
             case maps:get(influxdb_pool, AppSpec, undefined) of
-                undefined -> influxdb_pool;
-                _ ->
-                    list_to_atom(atom_to_list(AppName) ++ "_influxdb_pool")
+                undefined ->
+                    influxdb_pool;
+                DbSpecMap ->
+                    case maps:get(Db, DbSpecMap, undefined) of
+                        undefined ->
+                            influxdb_pool;
+                        _ ->
+                            list_to_atom(atom_to_list(AppName) ++ "_" ++ Db ++ "_influxdb_pool")
+                    end
             end
     end.
 
@@ -146,7 +153,8 @@ write_async(Config, Measurements) ->
 
 write_async(Config, Measurements, Options) ->
     GetWorkerTimeout = maps:get(get_worker_timeout, Options, 5000),
-    AvailWorkers = gen_server:call(get_pool_name(), get_avail_workers, GetWorkerTimeout),
+    Db = maps:get(database, Config, undefined),
+    AvailWorkers = gen_server:call(get_pool_name(Db), get_avail_workers, GetWorkerTimeout),
     EncodedMeasurements = influxdb_line_encoding:encode(Measurements),
     RandomWorkerIndex = rand:uniform(length(AvailWorkers)),
     lists:nth(RandomWorkerIndex, AvailWorkers) ! {Config, EncodedMeasurements, Options}.

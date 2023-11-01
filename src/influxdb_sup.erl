@@ -29,13 +29,22 @@ init([]) ->
                 case maps:get(influxdb_pool, AppSpec, undefined) of
                     undefined -> SpecAcc;
                     SizeSpec ->
-                        PoolName = list_to_atom(atom_to_list(App) ++ "_influxdb_pool"),
-                        PoolArgs = [{name, {local, PoolName}},
+                        DbSpecs =
+                        maps:fold(
+                            fun(Db, DbSpec, DbSpecAcc) ->
+                                PoolName = list_to_atom(atom_to_list(App) ++ "_" ++ Db ++ "_influxdb_pool"),
+                                PoolArgs = [{name, {local, PoolName}},
                                         {worker_module, batch_processor},
                                         {size, 5}, {max_overflow, 10},
-                                        {batch_proc_fun, BatchProcessFun}] ++ SizeSpec,
-                        [{list_to_atom(atom_to_list(App) ++ "_influxdb_pool"),
-                            {poolboy, start_link, [PoolArgs]}, permanent, 2000, worker, [poolboy]} | SpecAcc]
+                                        {batch_proc_fun, BatchProcessFun}] ++ DbSpec,
+                                [{list_to_atom(atom_to_list(App) ++ "_" ++ Db ++ "_influxdb_pool"),
+                                    {poolboy, start_link, [PoolArgs]}, permanent, 2000, worker, [poolboy]} | DbSpecAcc]
+
+                            end,
+                            [],
+                            SizeSpec
+                        ),
+                        DbSpecs ++ SpecAcc
                 end
             end,
             [],
