@@ -52,3 +52,39 @@ init([]) ->
         ),
     RestartStrategy = {one_for_one, 10, 10},
     {ok, {RestartStrategy, [PoolSpec | ExtraPoolSpec]}}.
+
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+init_test_() ->
+    AppPools = #{
+        mhs => #{
+            influxdb_pool => #{
+                "gmc" => [
+                    {size, 5},
+                    {max_overflow, 5}
+                ],
+                "GreyOrange" => [
+                    {size, 5},
+                    {max_overflow, 5}
+                ]
+            }
+        },
+        pf => #{
+            influxdb_pool => #{
+                "GreyOrange" => [
+                    {size, 5},
+                    {max_overflow, 5}
+                ]
+            }
+        }
+    },
+    application:set_env(influxdb, app_pools, AppPools),
+    {ok, {_, PoolSpecList}} = influxdb_sup:init([]),
+    TestResult1 = lists:keyfind('mhs_gmc_influxdb_pool', 1, PoolSpecList),
+    TestResult2 = lists:keyfind('pf_GreyOrange_influxdb_pool', 1, PoolSpecList),
+    ?_assertEqual(true, TestResult1 =/= false),
+    ?_assertEqual(true, TestResult2 =/= false).
+
+-endif.
