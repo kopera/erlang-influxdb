@@ -34,7 +34,7 @@ defmodule InfluxDB.Mixfile do
   end
 
   defp deps do
-    [{:jsone, "~> 1.4.3"},
-     {:ex_doc, "~> 0.15.0", only: :dev}]
+    [{:jsone, "~> 1.9.0"},
+     {:ex_doc, "~> 0.38.2", only: :dev}]
   end
 end
